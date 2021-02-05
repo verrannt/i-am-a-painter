@@ -132,3 +132,6 @@ dmypy.json
 
 # Data directory
 /data/gan-getting-started
+
+# PyCharm
+*.idea
