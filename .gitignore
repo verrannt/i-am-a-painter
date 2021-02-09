@@ -1,6 +1,13 @@
 # Project related files
 /data/gan-getting-started/
+/data/output/
+/data/results/
 
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
