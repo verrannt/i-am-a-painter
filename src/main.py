@@ -39,7 +39,7 @@ from tqdm import tqdm
 from random import random
 
 # Own modules
-from data_loader import DataLoader
+from data_loader import DataLoader, get_filenames
 from models.generators import Generators
 from models.discriminators import Discriminators
 from models.full import CycleGan
@@ -59,37 +59,6 @@ def initialize_TPUs():
         strategy = tf.distribute.get_strategy()
     print('Number of replicas:', strategy.num_replicas_in_sync)
 
-def get_data_paths(use_tpus=False, data_path='/kaggle/input/gan-getting-started/'):
-
-    if use_tpus:
-        from kaggle import KaggleDatasets
-        GCS_PATH =  KaggleDatasets().get_gcs_path()
-
-        MONET_FILENAMES = tf.io.gfile.glob(str(GCS_PATH + '/monet_tfrec/*.tfrec'))
-        PHOTO_FILENAMES = tf.io.gfile.glob(str(GCS_PATH + '/photo_tfrec/*.tfrec'))
-        
-    else:
-        MONET_TFREC_PATH = data_path + 'monet_tfrec/'
-        PHOTO_TFREC_PATH = data_path + 'photo_tfrec/'
-
-        MONET_FILENAMES = [MONET_TFREC_PATH + filename for filename in os.listdir(MONET_TFREC_PATH)]
-        PHOTO_FILENAMES = [PHOTO_TFREC_PATH + filename for filename in os.listdir(PHOTO_TFREC_PATH)]
-
-    print('Monet TFRecord Files:', len(MONET_FILENAMES))
-    print('Photo TFRecord Files:', len(PHOTO_FILENAMES))
-
-    import re
-    def count_data_items(filenames):
-        n = [int(re.compile(r'-([0-9]*)\.').search(filename).group(1)) for filename in filenames]
-        return np.sum(n)
-
-    n_monet_samples = count_data_items(MONET_FILENAMES)
-    n_photo_samples = count_data_items(PHOTO_FILENAMES)
-
-    print('Monet Samples : ',n_monet_samples)
-    print('Photo Samples : ',n_photo_samples)
-
-    return MONET_FILENAMES, PHOTO_FILENAMES
 
 if __name__=='__main__':
 
@@ -99,18 +68,23 @@ if __name__=='__main__':
     DATA_PATH = 'data/gan-getting-started/'
     # Set global image size constant
     IMAGE_SIZE = [256, 256]
+    # Configure validation split
+    VAL_SPLIT=0.2
 
     if USE_TPUS:
         initialize_TPUs()
 
-    monet_filenames, photo_filenames = get_data_paths(USE_TPUS, DATA_PATH)
+    monet_filenames, photo_filenames = get_filenames(USE_TPUS, DATA_PATH)
 
     # Get datasets
     dataLoader = DataLoader(IMAGE_SIZE)
 
-    monet_ds = dataLoader.load_dataset(monet_filenames, labeled=True, augment=True).batch(1)
-    photo_ds = dataLoader.load_dataset(photo_filenames, labeled=True, augment=True).batch(1)
-    photo_ds_test = dataLoader.load_dataset(photo_filenames, labeled=True, augment=False).batch(1)
+    monet_train, monet_val = dataLoader.load_dataset(
+        monet_filenames, batch_size=1, vsplit=VAL_SPLIT, augment=True)
+    photo_train, photo_val = dataLoader.load_dataset(
+        photo_filenames, batch_size=1, vsplit=VAL_SPLIT, augment=True)
+    photo_test = dataLoader.load_dataset(
+        photo_filenames, batch_size=1, augment=False)
 
     # Create model
     monet_generator = Generators.unet() 
@@ -124,7 +98,8 @@ if __name__=='__main__':
     photo_discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 
     cycle_gan_model = CycleGan(
-        monet_generator, photo_generator, monet_discriminator, photo_discriminator
+        monet_generator, photo_generator, 
+        monet_discriminator, photo_discriminator
     )
 
     cycle_gan_model.compile(
@@ -142,7 +117,9 @@ if __name__=='__main__':
 
     # Fit model
     history = cycle_gan_model.fit(
-        tf.data.Dataset.zip((monet_ds, photo_ds)),
+        tf.data.Dataset.zip((monet_train, photo_train)),
+        validation_data=tf.data.Dataset.zip((monet_val, photo_val)),
+        validation_freq=5,
         epochs=1,
         verbose=1
     )
