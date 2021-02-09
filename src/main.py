@@ -1,3 +1,27 @@
+# % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+#
+# Train a network for the "I'm Something of a Painter Myself" Kaggle challenge.
+#
+# NOTE: Run this script from the root of the repository with:
+# > python src/main.py
+#
+# AUTHORS (Github handles)
+# - @aerigon
+# - @thomasroodnl
+# - @verrannt
+#
+# CREDITS
+# - Amy Jang's CycleGAN tutorial 
+#   (https://www.kaggle.com/amyjang/monet-cyclegan-tutorial)
+# - Joaquín Bengochea's extension using data augmentation
+#   (https://www.kaggle.com/joackobengochea/cyclegan-with-data-augmentation
+#
+# LICENSE
+# All code is licensed under GNU General Public License (find at root of repo)
+# 
+# % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+
+
 # System modules
 import os
 import shutil
@@ -139,13 +163,13 @@ if __name__=='__main__':
     plt.show()
 
     # Save outputs
-    #i = 1
-    #for img in photo_ds_test:
-    #    print('Processing image: {}\r'.format(i), end='',)
-    #    prediction = monet_generator(img, training=False)[0].numpy()
-    #    prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
-    #    im = PIL.Image.fromarray(prediction)
-    #    im.save("../images/" + str(i) + ".jpg")
-    #    i += 1
+    i = 1
+    for img in photo_ds_test:
+        print('Processing image: {}\r'.format(i), end='',)
+        prediction = monet_generator(img, training=False)[0].numpy()
+        prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
+        im = PIL.Image.fromarray(prediction)
+        im.save("data/output/images/" + str(i) + ".jpg")
+        i += 1
 
     #shutil.make_archive("/kaggle/working/images", 'zip', "/kaggle/images")
