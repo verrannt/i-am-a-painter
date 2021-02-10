@@ -62,14 +62,22 @@ def initialize_TPUs():
 
 if __name__=='__main__':
 
+    try:
+        os.mkdir('../../kaggle/images')
+        print('Created `images` directory.')
+    except FileExistsError:
+        print('`images` directory already exists.')
+
     # Enable using TPUs (only on Kaggle and Google CoLab)
     USE_TPUS = False
     # Use a custom data path. If empty string, uses '/kaggle/input/gan-getting-started/'
-    DATA_PATH = 'data/gan-getting-started/'
+    DATA_PATH = '../../kaggle/input/gan-getting-started/'
     # Set global image size constant
     IMAGE_SIZE = [256, 256]
     # Configure validation split
     VAL_SPLIT=0.2
+    # Configure batch size for training
+    BATCH_SIZE=6
 
     if USE_TPUS:
         initialize_TPUs()
@@ -80,10 +88,10 @@ if __name__=='__main__':
     dataLoader = DataLoader(IMAGE_SIZE)
 
     monet_train, monet_val = dataLoader.load_dataset(
-        monet_filenames, batch_size=1, vsplit=VAL_SPLIT, augment=True)
+        monet_filenames, batch_size=BATCH_SIZE, vsplit=VAL_SPLIT, augment=True)
     photo_train, photo_val = dataLoader.load_dataset(
-        photo_filenames, batch_size=1, vsplit=VAL_SPLIT, augment=True)
-    photo_test = dataLoader.load_dataset(
+        photo_filenames, batch_size=BATCH_SIZE, vsplit=VAL_SPLIT, augment=True)
+    photo_test, _ = dataLoader.load_dataset(
         photo_filenames, batch_size=1, augment=False)
 
     # Create model
@@ -113,8 +121,6 @@ if __name__=='__main__':
         identity_loss_fn = identity_loss
     )
 
-    print('Came here successfully')
-
     # Fit model
     history = cycle_gan_model.fit(
         tf.data.Dataset.zip((monet_train, photo_train)),
@@ -125,28 +131,28 @@ if __name__=='__main__':
     )
 
     # Plot exemplary model output
-    _, ax = plt.subplots(5, 2, figsize=(60, 60))
-    for i, img in enumerate(photo_ds.take(5)):
-        prediction = monet_generator(img, training=False)[0].numpy()
-        prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
-        img = (img[0] * 127.5 + 127.5).numpy().astype(np.uint8)
+    #_, ax = plt.subplots(5, 2, figsize=(60, 60))
+    #for i, img in enumerate(photo_train.take(5)):
+    #    prediction = monet_generator(img, training=False)[0].numpy()
+    #    prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
+    #    img = (img[0] * 127.5 + 127.5).numpy().astype(np.uint8)
 
-        ax[i, 0].imshow(img)
-        ax[i, 1].imshow(prediction)
-        ax[i, 0].set_title("Input Photo")
-        ax[i, 1].set_title("Monet-esque")
-        ax[i, 0].axis("off")
-        ax[i, 1].axis("off")
-    plt.show()
+    #    ax[i, 0].imshow(img)
+    #    ax[i, 1].imshow(prediction)
+    #    ax[i, 0].set_title("Input Photo")
+    #    ax[i, 1].set_title("Monet-esque")
+    #    ax[i, 0].axis("off")
+    #    ax[i, 1].axis("off")
+    #plt.show()
 
     # Save outputs
     i = 1
-    for img in photo_ds_test:
+    for img in photo_test:
         print('Processing image: {}\r'.format(i), end='',)
         prediction = monet_generator(img, training=False)[0].numpy()
         prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
         im = PIL.Image.fromarray(prediction)
-        im.save("data/output/images/" + str(i) + ".jpg")
+        im.save("../../kaggle/images/" + str(i) + ".jpg")
         i += 1
 
-    #shutil.make_archive("/kaggle/working/images", 'zip', "/kaggle/images")
+    shutil.make_archive("../../kaggle/working/images", 'zip', "../../kaggle/images")
