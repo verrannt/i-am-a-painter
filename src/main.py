@@ -75,7 +75,9 @@ if __name__=='__main__':
     # Set global image size constant
     IMAGE_SIZE = [256, 256]
     # Configure validation split
-    VAL_SPLIT=0.2
+    VAL_SPLIT=0. # NOTE Leave off for now
+    if VAL_SPLIT:
+        raise NotImplementedError('Val split is not fully implemented yet.')
     # Configure batch size for training
     BATCH_SIZE=6
 
@@ -124,8 +126,8 @@ if __name__=='__main__':
     # Fit model
     history = cycle_gan_model.fit(
         tf.data.Dataset.zip((monet_train, photo_train)),
-        validation_data=tf.data.Dataset.zip((monet_val, photo_val)),
-        validation_freq=5,
+        #validation_data=tf.data.Dataset.zip((monet_val, photo_val)),
+        #validation_freq=5,
         epochs=1,
         verbose=1
     )
