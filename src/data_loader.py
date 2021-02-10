@@ -65,7 +65,7 @@ class DataLoader():
         if vsplit:
             return trainset.batch(batch_size), valset.batch(batch_size)
         else:
-            return trainset.batch(batch_size)
+            return trainset.batch(batch_size), None
 
 def get_filenames(use_tpus=False, data_path='/kaggle/input/gan-getting-started/'):
 
