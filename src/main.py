@@ -23,6 +23,7 @@
 
 
 # System modules
+import argparse
 import os
 import shutil
 
@@ -58,43 +59,90 @@ def initialize_TPUs():
         print(e)
         strategy = tf.distribute.get_strategy()
     print('Number of replicas:', strategy.num_replicas_in_sync)
+    return strategy
+
+def getArgs():
+    """ Parse command line arguemnts """
+
+    parser = argparse.ArgumentParser(description="Interact with library.")
+
+    parser.add_argument("--kaggle_backend", 
+                        action='store_true',
+                        help='Use if run on kaggle backend.')
+    parser.add_argument("--batch_size",
+                        type=int,
+                        nargs='?',
+                        default=1,
+                        help='Set batch size for training.')
+    parser.add_argument("--val_split",
+                        type=float,
+                        nargs='?',
+                        default=0.0,
+                        help='Set ratio of data to be reserved for validation '
+                        'during training.')                
+    parser.add_argument("--use_tpus", 
+                        action='store_true',
+                        help='Use TPUs if possible.')
+    parser.add_argument("--no_outputs", 
+                        action='store_true',
+                        help='Save model outputs to disk as .zip')
+    parser.add_argument("--name",
+                        type=str,
+                        nargs='?',
+                        help='Additional name for the saved model.')
+
+    return parser.parse_args()
 
 
 if __name__=='__main__':
 
-    try:
-        os.mkdir('../../kaggle/images')
-        print('Created `images` directory.')
-    except FileExistsError:
-        print('`images` directory already exists.')
+    CONFIGS = getArgs()
 
-    # Enable using TPUs (only on Kaggle and Google CoLab)
-    USE_TPUS = False
-    # Use a custom data path. If empty string, uses '/kaggle/input/gan-getting-started/'
-    DATA_PATH = '../../kaggle/input/gan-getting-started/'
+    # If using Kaggle backend, create necessary directory for image outputs
+    if CONFIGS.kaggle_backend:
+        try:
+            os.mkdir('../../kaggle/images')
+            print('Created `images` directory.')
+        except FileExistsError:
+            print('`images` directory already exists.')
+
+        # Configure path to data
+        DATA_PATH = '../../kaggle/input/gan-getting-started/'
+    else:
+        DATA_PATH = 'data/gan-getting-started/'
+
     # Set global image size constant
     IMAGE_SIZE = [256, 256]
-    # Configure validation split
-    VAL_SPLIT=0. # NOTE Leave off for now
-    if VAL_SPLIT:
+
+    # Check validation split for correct form
+    if CONFIGS.val_split: # NOTE not working right now
+        assert 0. <= CONFIGS.val_split < 1, \
+            "Validation split must be between 0. and 1."
         raise NotImplementedError('Val split is not fully implemented yet.')
-    # Configure batch size for training
-    BATCH_SIZE=6
 
-    if USE_TPUS:
-        initialize_TPUs()
+    # Initialize TPUs (only on Kaggle and Google CoLab)
+    if CONFIGS.use_tpus:
+        strategy = initialize_TPUs()
 
-    monet_filenames, photo_filenames = get_filenames(USE_TPUS, DATA_PATH)
+    monet_filenames, photo_filenames = get_filenames(CONFIGS.use_tpus, DATA_PATH)
 
     # Get datasets
     dataLoader = DataLoader(IMAGE_SIZE)
 
     monet_train, monet_val = dataLoader.load_dataset(
-        monet_filenames, batch_size=BATCH_SIZE, vsplit=VAL_SPLIT, augment=True)
+        monet_filenames, 
+        batch_size=CONFIGS.batch_size, 
+        vsplit=CONFIGS.val_split, 
+        augment=True)
     photo_train, photo_val = dataLoader.load_dataset(
-        photo_filenames, batch_size=BATCH_SIZE, vsplit=VAL_SPLIT, augment=True)
+        photo_filenames, 
+        batch_size=CONFIGS.batch_size, 
+        vsplit=CONFIGS.val_split, 
+        augment=True)
     photo_test, _ = dataLoader.load_dataset(
-        photo_filenames, batch_size=1, augment=False)
+        photo_filenames, 
+        batch_size=1, 
+        augment=False)
 
     # Create model
     monet_generator = Generators.unet() 
@@ -147,14 +195,22 @@ if __name__=='__main__':
     #    ax[i, 1].axis("off")
     #plt.show()
 
-    # Save outputs
-    i = 1
-    for img in photo_test:
-        print('Processing image: {}\r'.format(i), end='',)
-        prediction = monet_generator(img, training=False)[0].numpy()
-        prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
-        im = PIL.Image.fromarray(prediction)
-        im.save("../../kaggle/images/" + str(i) + ".jpg")
-        i += 1
+    # Save outputs unless disabled
+    if not CONFIGS.no_outputs:
+        if CONFIGS.kaggle_backend:
+            output_dir = "../../kaggle/images/"
+            zip_dir = "../../kaggle/working/images"
+        else:
+            output_dir = "data/output/"
+            zip_dir = "data/"
 
-    shutil.make_archive("../../kaggle/working/images", 'zip', "../../kaggle/images")
+        i = 1
+        for img in photo_test:
+            print('Processing image: {}\r'.format(i), end='',)
+            prediction = monet_generator(img, training=False)[0].numpy()
+            prediction = (prediction * 127.5 + 127.5).astype(np.uint8)
+            im = PIL.Image.fromarray(prediction)
+            im.save(output_dir + str(i) + ".jpg")
+            i += 1
+
+        shutil.make_archive(zip_dir, 'zip', output_dir)
