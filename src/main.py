@@ -115,10 +115,13 @@ if __name__=='__main__':
     IMAGE_SIZE = [256, 256]
 
     # Check validation split for correct form
-    if CONFIGS.val_split: # NOTE not working right now
-        assert 0. <= CONFIGS.val_split < 1, \
-            "Validation split must be between 0. and 1."
-        raise NotImplementedError('Val split is not fully implemented yet.')
+    if CONFIGS.val_split:
+        # We throw an error because we don't use validation split for GANs
+        raise ValueError("Validation training is not useful for GANs and is "
+            "therefore not permitted with this library.")
+        # Usually, what you would do is this:
+        # assert 0. <= CONFIGS.val_split < 1, \
+        #     "Validation split must be between 0. and 1."
 
     # Initialize TPUs (only on Kaggle and Google CoLab)
     if CONFIGS.use_tpus:
@@ -174,8 +177,6 @@ if __name__=='__main__':
     # Fit model
     history = cycle_gan_model.fit(
         tf.data.Dataset.zip((monet_train, photo_train)),
-        #validation_data=tf.data.Dataset.zip((monet_val, photo_val)),
-        #validation_freq=5,
         epochs=1,
         verbose=1
     )
