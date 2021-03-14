@@ -148,31 +148,32 @@ if __name__=='__main__':
         augment=False)
 
     # Create model
-    monet_generator = Generators.unet() 
-    photo_generator = Generators.unet()
-    monet_discriminator = Discriminators.default() 
-    photo_discriminator = Discriminators.default()
+    with strategy.scope():
+        monet_generator = Generators.unet() 
+        photo_generator = Generators.unet()
+        monet_discriminator = Discriminators.default() 
+        photo_discriminator = Discriminators.default()
 
-    monet_generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-    photo_generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-    monet_discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-    photo_discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        monet_generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        photo_generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        monet_discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        photo_discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 
-    cycle_gan_model = CycleGan(
-        monet_generator, photo_generator, 
-        monet_discriminator, photo_discriminator
-    )
+        cycle_gan_model = CycleGan(
+            monet_generator, photo_generator, 
+            monet_discriminator, photo_discriminator
+        )
 
-    cycle_gan_model.compile(
-        m_gen_optimizer = monet_generator_optimizer,
-        p_gen_optimizer = photo_generator_optimizer,
-        m_disc_optimizer = monet_discriminator_optimizer,
-        p_disc_optimizer = photo_discriminator_optimizer,
-        gen_loss_fn = generator_loss,
-        disc_loss_fn = discriminator_loss,
-        cycle_loss_fn = calc_cycle_loss,
-        identity_loss_fn = identity_loss
-    )
+        cycle_gan_model.compile(
+            m_gen_optimizer = monet_generator_optimizer,
+            p_gen_optimizer = photo_generator_optimizer,
+            m_disc_optimizer = monet_discriminator_optimizer,
+            p_disc_optimizer = photo_discriminator_optimizer,
+            gen_loss_fn = generator_loss,
+            disc_loss_fn = discriminator_loss,
+            cycle_loss_fn = calc_cycle_loss,
+            identity_loss_fn = identity_loss
+        )
 
     # Fit model
     history = cycle_gan_model.fit(
