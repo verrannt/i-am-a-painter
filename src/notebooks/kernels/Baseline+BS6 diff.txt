@@ -1,0 +1,23 @@
+Baseline+VF -> Baseline+BS6:
+	Cell 7:
+		68	dataset = dataset.map(random_hor_flip, num_parallel_calls=AUTOTUNE)
+		69	dataset = dataset.map(random_vert_flip, num_parallel_calls=AUTOTUNE)
+		70	...
+	
+		-->
+	
+		68	dataset = dataset.map(random_hor_flip, num_parallel_calls=AUTOTUNE)
+		69	# dataset = dataset.map(random_vert_flip, num_parallel_calls=AUTOTUNE)
+		70	...
+
+	Cell 9:
+		1	monet_ds = load_dataset(MONET_FILENAMES, augment=True).batch(1)
+		2	photo_ds = load_dataset(PHOTO_FILENAMES, augment=True).batch(1)
+		3   ...
+	
+		-->
+	
+		1	monet_ds = load_dataset(MONET_FILENAMES, augment=True).batch(6)
+		2	photo_ds = load_dataset(PHOTO_FILENAMES, augment=True).batch(6)
+		3   ...
+		
